@@ -1,0 +1,3 @@
+[submodule "external/libspng"]
+	path = external/libspng
+	url = https://github.com/randy408/libspng.git
