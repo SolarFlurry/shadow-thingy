@@ -11,7 +11,7 @@ Pixel pixel(float r, float g, float b, float a, float depth) {
 }
 
 void write(Pixel* pixel, Pixel writee) {
-	if (writee.depth <= pixel->depth) {
+	if (writee.depth >= pixel->depth) {
 		pixel->color = writee.color;
 		pixel->depth = writee.depth;
 	}
@@ -35,14 +35,18 @@ void render(unsigned char* image, size_t width, size_t height) {
 			// } else {
 			// 	grid[i * 10 + j] = 1;
 			// }
-			grid[i * 10 + j] = 0;
+			if (i == j) {
+				grid[i * 10 + j] = 1;
+			} else {
+				grid[i * 10 + j] = 0;
+			}
 		}
 	}
 	grid[0] = 1;
 
 	Pixel* pixels = calloc(width * height, sizeof(Pixel));
 	for (int i = 0; i < width * height; i++) {
-		pixels[i] = pixel(0, 0, 0, 0, INFINITY);
+		pixels[i] = pixel(0, 0, 0, 0, -INFINITY);
 	}
 
 	VertexBuffer vertices = fromGrid(grid, 10, 10);
