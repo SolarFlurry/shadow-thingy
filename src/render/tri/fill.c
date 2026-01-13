@@ -11,9 +11,10 @@ void scanline(Pixel* buffer, FillVertex* p0, FillVertex* p1, int width, int heig
 		swap((void*)&p0, (void*)&p1);
 	}
 	int length = (int)(p1->pos.x - p0->pos.x + 0.5);
-	for (int i = 0; i < length; i++) {
-		Vec3 pos = vec3Lerp(p0->pos, p1->pos, i / (p1->pos.x - p0->pos.x));
-		Color color = colorLerp(p0->color, p1->color, i / (p1->pos.x - p0->pos.x));
+	if (p1->pos.x - p0->pos.x == 0) return;
+	for (int i = 0; i <= length; i++) {
+		Vec3 pos = vec3Lerp(p0->pos, p1->pos, i / (float)length);
+		Color color = colorLerp(p0->color, p1->color, i / (float)length);
 
 		int x = i + (int)(p0->pos.x + 0.5);
 		int y = (int)(p0->pos.y + 0.5);

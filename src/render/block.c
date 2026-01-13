@@ -59,16 +59,40 @@ VertexBuffer fromGrid(int* grid, size_t width, size_t height) {
 			int bottomright = index2D(grid, i + 1, j + 1, width, height, 1);
 
 			if (middle != top) {
+				int cornerleft, cornerright, sideleft, sideright;
+				if (middle == 1) {
+					cornerleft = left;
+					cornerright = right;
+					sideleft = topleft;
+					sideright = topright;
+				} else {
+					cornerleft = topleft;
+					cornerright = topright;
+					sideleft = left;
+					sideright = right;
+				}
 				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, 0), .adjacent = 0});
 				bufferPush(&vertices, (Vertex) {.pos = vec3(x + 1, y, 0), .adjacent = 0});
-				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, 1), .adjacent = vertexAO(top, left, topleft)});
-				bufferPush(&vertices, (Vertex) {.pos = vec3(x + 1, y, 1), .adjacent = vertexAO(top, right, topright)});
+				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, 1), .adjacent = vertexAO(1, sideleft, cornerleft)});
+				bufferPush(&vertices, (Vertex) {.pos = vec3(x + 1, y, 1), .adjacent = vertexAO(1, sideright, cornerright)});
 			}
 			if (middle != left) {
+				int cornertop, cornerbottom, sidetop, sidebottom;
+				if (middle == 1) {
+					cornertop = top;
+					cornerbottom = bottom;
+					sidetop = topleft;
+					sidebottom = bottomleft;
+				} else {
+					cornertop = topleft;
+					cornerbottom = bottomleft;
+					sidetop = top;
+					sidebottom = bottom;
+				}
 				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y + 1, 0), .adjacent = 0});
 				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, 0), .adjacent = 0});
-				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y + 1, 1), .adjacent = vertexAO(top, left, topleft)});
-				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, 1), .adjacent = vertexAO(bottom, left, bottomleft)});
+				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y + 1, 1), .adjacent = vertexAO(1, sidebottom, cornerbottom)});
+				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, 1), .adjacent = vertexAO(1, sidetop, cornertop)});
 			}
 			int z = 1 - index2D(grid, i, j, width, height, 1);
 			bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, z), .adjacent = z * vertexAO(top, left, topleft)});
