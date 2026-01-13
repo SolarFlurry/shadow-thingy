@@ -32,30 +32,39 @@ int index2D(int* grid, size_t x, size_t y, size_t width, size_t height, int outB
 	return grid[y * width + x];
 }
 
-VertexBuffer fromGrid(int* grid, size_t gridWidth, size_t gridHeight) {
+VertexBuffer fromGrid(int* grid, size_t width, size_t height) {
 	VertexBuffer vertices = newBuffer();
-	for (int j = 0; j <= gridHeight; j++) {
-		for (int i = 0; i <= gridWidth; i++) {
-			float x = i - gridWidth/2.0;
-			float y = j - gridHeight/2.0;
+	for (int j = 0; j <= height; j++) {
+		for (int i = 0; i <= width; i++) {
+			float x = i - width/2.0;
+			float y = j - height/2.0;
 			if (
-				index2D(grid, i, j, gridWidth, gridHeight, 1) !=
-				index2D(grid, i, j - 1, gridWidth, gridHeight, 1)
+				index2D(grid, i, j, width, height, 1) !=
+				index2D(grid, i, j - 1, width, height, 1)
 			) {
 				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, 0), .adjacent = 0});
 				bufferPush(&vertices, (Vertex) {.pos = vec3(x + 1, y, 0), .adjacent = 0});
-				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, 1), .adjacent = 0});
-				bufferPush(&vertices, (Vertex) {.pos = vec3(x + 1, y, 1), .adjacent = 0});
+				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, 1), .adjacent = 2});
+				bufferPush(&vertices, (Vertex) {.pos = vec3(x + 1, y, 1), .adjacent = 2});
 			}
 			if (
-				index2D(grid, i, j, gridWidth, gridHeight, 1) !=
-				index2D(grid, i - 1, j, gridWidth, gridHeight, 1)
+				index2D(grid, i, j, width, height, 1) !=
+				index2D(grid, i - 1, j, width, height, 1)
 			) {
 				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y + 1, 0), .adjacent = 0});
 				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, 0), .adjacent = 0});
-				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y + 1, 1), .adjacent = 0});
-				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, 1), .adjacent = 0});
+				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y + 1, 1), .adjacent = 2});
+				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, 1), .adjacent = 2});
 			}
+			int top = index2D(grid, i, j - 1, width, height, 1);
+			int left = index2D(grid, i - 1, j, width, height, 1);
+			int bottom = index2D(grid, i, j + 1, width, height, 1);
+			int right = index2D(grid, i + 1, j, width, height, 1);
+			int z = 1 - index2D(grid, i, j, width, height, 1);
+			bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, z), .adjacent = z * (top + left + index2D(grid, i-1, j-1, width, height, 1))});
+			bufferPush(&vertices, (Vertex) {.pos = vec3(x + 1, y, z), .adjacent = z * (top + right + index2D(grid, i+1, j-1, width, height, 1))});
+			bufferPush(&vertices, (Vertex) {.pos = vec3(x, y + 1, z), .adjacent = z * (bottom + left + index2D(grid, i-1, j+1, width, height, 1))});
+			bufferPush(&vertices, (Vertex) {.pos = vec3(x + 1, y + 1, z), .adjacent = z * (bottom + right + index2D(grid, i+1, j+1, width, height, 1))});
 		}
 	}
 

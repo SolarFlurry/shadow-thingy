@@ -13,3 +13,4 @@ typedef struct Color {
 
 Color color(float r, float g, float b, float a);
 Color colorLerp(Color p0, Color p1, float t);
+Color colorDiv(Color p0, float p1);

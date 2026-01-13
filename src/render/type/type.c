@@ -17,6 +17,14 @@ Vec3 vec3Lerp(Vec3 p0, Vec3 p1, float t) {
 	);
 }
 
+Vec3 vec3Div(Vec3 p0, float p1) {
+	return vec3(
+		p0.x / p1,
+		p0.y / p1,
+		p0.z / p1
+	);
+}
+
 Color color (float r, float g, float b, float a) {
 	return (Color) {
 		.r = r,
@@ -33,4 +41,13 @@ Color colorLerp(Color p0, Color p1, float t) {
 		.b = p0.b + t * (p1.b - p0.b),
 		.a = p0.a + t * (p1.a - p0.a),
 	};
+}
+
+Color colorDiv(Color p0, float p1) {
+	return color(
+		p0.r / p1,
+		p0.g / p1,
+		p0.b / p1,
+		p0.a / p1
+	);
 }

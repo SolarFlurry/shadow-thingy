@@ -5,8 +5,8 @@
 
 #include "render/render.h"
 
-const size_t IMAGE_WIDTH = 200;
-const size_t IMAGE_HEIGHT = 200;
+const size_t IMAGE_WIDTH = 500;
+const size_t IMAGE_HEIGHT = 500;
 
 bool endsWith(const char *str, const char *suffix) {
     if (!str || !suffix) {
