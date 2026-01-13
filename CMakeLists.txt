@@ -9,5 +9,7 @@ add_executable(shadowth
 	src/main.c
 	src/render/block.c
 	src/render/render.c
+	src/render/tri/fill.c
+	src/render/type/type.c
 )
 target_link_libraries(shadowth PRIVATE spng)

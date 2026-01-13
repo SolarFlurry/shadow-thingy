@@ -2,22 +2,27 @@
 
 Pixel pixel(float r, float g, float b, float a, float depth) {
 	Pixel pixel;
-	pixel.r = r;
-	pixel.g = g;
-	pixel.b = b;
-	pixel.a = a;
+	pixel.color.r = r;
+	pixel.color.g = g;
+	pixel.color.b = b;
+	pixel.color.a = a;
 	pixel.depth = depth;
 	return pixel;
 }
 
 void write(Pixel* pixel, Pixel writee) {
 	if (writee.depth <= pixel->depth) {
-		pixel->r = writee.r;
-		pixel->g = writee.g;
-		pixel->b = writee.b;
-		pixel->a = writee.a;
+		pixel->color = writee.color;
 		pixel->depth = writee.depth;
 	}
+}
+
+Vec3 project(Vec3 p, Camera c) {
+	Vec3 relative = vec3(p.x - c.pos.x, p.y - c.pos.y, p.z - c.pos.z);
+	if (relative.z <= 0) return vec3(0, 0, -1);
+	float x = (c.focalLength * relative.x) / (c.focalLength + relative.z);
+	float y = (c.focalLength * relative.y) / (c.focalLength + relative.z);
+	return vec3(x, y, p.z);
 }
 
 void render(unsigned char* image, size_t width, size_t height) {
@@ -25,49 +30,81 @@ void render(unsigned char* image, size_t width, size_t height) {
 
 	for (int i = 0; i < 10; i++) {
 		for (int j = 0; j < 10; j++) {
-			if (i == 0 || i == 9 || j == 0 || j == 9) {
-				grid[i * 10 + j] = 1;
-			} else {
-				grid[i * 10 + j] = 0;
-			}
+			// if (i == 0 || i == 9 || j == 0 || j == 9) {
+			// 	grid[i * 10 + j] = 1;
+			// } else {
+			// 	grid[i * 10 + j] = 0;
+			// }
+			grid[i * 10 + j] = 0;
 		}
 	}
 
 	Pixel* pixels = calloc(width * height, sizeof(Pixel));
 	for (int i = 0; i < width * height; i++) {
-		pixels[i] = pixel(0, 0, 0, 0, 0);
+		pixels[i] = pixel(0, 0, 0, 0, INFINITY);
 	}
 
-	size_t verticesSize;
-	Vec3* vertices = fromGrid(grid, 10, 10, &verticesSize);
+	VertexBuffer vertices = fromGrid(grid, 10, 10);
 
 	Camera camera;
 	camera.pos = vec3(0, 0, -1);
-	camera.focalLength = 10;
+	camera.focalLength = 5;
 
-	for (int i = 0; i < verticesSize; i++) {
-		Vec3 vertex = vertices[i];
-		Vec3 relative = vec3(vertex.x - camera.pos.x, vertex.y - camera.pos.y, vertex.z - camera.pos.z);
-		if (relative.z <= 0) continue;
-		int x = (int)(camera.focalLength * (relative.x-5)/relative.z);
-		int y = (int)(camera.focalLength * (relative.y-5)/relative.z);
+	float scaleFactor = 20.0;
 
-		x += width/2;
-		y += height/2;
-
-		if (x < 0 || x >= width || y < 0 || y >= height) continue;
-
-		write(&pixels[y * width + x], pixel(255, 0, 0, 255, 0));
+	outer: for (int i = 0; i < vertices.len; i+=4) {
+		Vec3 face[4];
+		for (int j = 0; j < 4; j++) {
+			Vertex* vertex = bufferGet(&vertices, i + j);
+			Vec3 projected = project(vertex->pos, camera);
+			if (projected.z == -1) {
+				goto outer; // this skips the face as one of its vertices are behind the camera
+				// please tell me a better solution than to use a goto (this feels extremely ugly)
+			}
+			int x = (int)(scaleFactor * projected.x) + width/2;
+			int y = (int)(scaleFactor * projected.y) + height/2;
+			face[j] = vec3(x, y, 0);
+		}
+		trifill(pixels,
+			(FillVertex) {
+				.pos = face[0],
+				.color = color(0, 0, 0, 1)
+			},
+			(FillVertex) {
+				.pos = face[1],
+				.color = color(0, 0, 0, 1)
+			},
+			(FillVertex) {
+				.pos = face[2],
+				.color = color(0, 0, 0, 1)
+			},
+			width, height
+		);
+		trifill(pixels,
+			(FillVertex) {
+				.pos = face[1],
+				.color = color(1, 0, 1, 1)
+			},
+			(FillVertex) {
+				.pos = face[2],
+				.color = color(1, 0, 1, 1)
+			},
+			(FillVertex) {
+				.pos = face[3],
+				.color = color(1, 0, 1, 1)
+			},
+			width, height
+		);
 	}
 
 	for (int i = 0; i < width * height; i++) {
-		image[i * 4 + 0] = pixels[i].r;
-		image[i * 4 + 1] = pixels[i].g;
-		image[i * 4 + 2] = pixels[i].b;
-		image[i * 4 + 3] = pixels[i].a;
+		image[i * 4 + 0] = pixels[i].color.r * 255;
+		image[i * 4 + 1] = pixels[i].color.g * 255;
+		image[i * 4 + 2] = pixels[i].color.b * 255;
+		image[i * 4 + 3] = pixels[i].color.a * 255;
 	}
 
-	free(vertices);
+	freeBuffer(&vertices);
 	free(grid);
 	free(pixels);
 }
