@@ -49,10 +49,10 @@ void render(unsigned char* image, size_t width, size_t height) {
 
 	Camera camera;
 	camera.pos = vec3(0, 0, -1);
-	camera.focalLength = 5;
+	camera.focalLength = 10;
 
 	float scaleFactor = 50.0;
-	float shadowRatio = 8.0;
+	float shadowRatio = 1/8.0;
 
 	outer: for (int i = 0; i < vertices.len; i+=4) {
 		Vec3 face[4];
@@ -69,33 +69,52 @@ void render(unsigned char* image, size_t width, size_t height) {
 			face[j] = vec3(x, y, projected.z);
 			adjacent[j] = vertex->adjacent;
 		}
+		Vec3 v0 = bufferGet(&vertices, i + 0)->pos;
+		Vec3 v1 = bufferGet(&vertices, i + 1)->pos;
+		Vec3 v2 = bufferGet(&vertices, i + 2)->pos;
+		Vec3 a = vec3(
+			v1.x - v0.x,
+			v1.y - v0.y,
+			v1.z - v0.z
+		);
+		Vec3 b = vec3(
+			v2.x - v0.x,
+			v2.y - v0.y,
+			v2.z - v0.z
+		);
+		float shading = fabs(normalise(vec3(
+			a.y*b.z - a.z*b.y,
+			a.z*b.x - a.x*b.z,
+			a.x*b.y - a.y*b.x
+		)).z);
+		shading = (1 - shading) * 0.3;
 		trifill(pixels,
 			(FillVertex) {
 				.pos = face[0],
-				.color = color(0, 0, 0, adjacent[0]/shadowRatio)
+				.color = color(0, 0, 0, adjacent[0]*shadowRatio + shading)
 			},
 			(FillVertex) {
 				.pos = face[1],
-				.color = color(0, 0, 0, adjacent[1]/shadowRatio)
+				.color = color(0, 0, 0, adjacent[1]*shadowRatio + shading)
 			},
 			(FillVertex) {
 				.pos = face[2],
-				.color = color(0, 0, 0, adjacent[2]/shadowRatio)
+				.color = color(0, 0, 0, adjacent[2]*shadowRatio + shading)
 			},
 			width, height
 		);
 		trifill(pixels,
 			(FillVertex) {
 				.pos = face[1],
-				.color = color(0, 0, 0, adjacent[1]/shadowRatio)
+				.color = color(0, 0, 0, adjacent[1]*shadowRatio + shading)
 			},
 			(FillVertex) {
 				.pos = face[2],
-				.color = color(0, 0, 0, adjacent[2]/shadowRatio)
+				.color = color(0, 0, 0, adjacent[2]*shadowRatio + shading)
 			},
 			(FillVertex) {
 				.pos = face[3],
-				.color = color(0, 0, 0, adjacent[3]/shadowRatio)
+				.color = color(0, 0, 0, adjacent[3]*shadowRatio + shading)
 			},
 			width, height
 		);

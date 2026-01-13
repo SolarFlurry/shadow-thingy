@@ -25,6 +25,11 @@ Vec3 vec3Div(Vec3 p0, float p1) {
 	);
 }
 
+Vec3 normalise(Vec3 p) {
+	float length = sqrtf(p.x*p.x + p.y*p.y + p.z*p.z);
+	return vec3Div(p, length);
+}
+
 Color color (float r, float g, float b, float a) {
 	return (Color) {
 		.r = r,
