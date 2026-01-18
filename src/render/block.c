@@ -26,10 +26,14 @@ Vertex* bufferGet(VertexBuffer* buffer, size_t index) {
 	return &buffer->data[index];
 }
 
-int index2D(int* grid, size_t x, size_t y, size_t width, size_t height, int outBounds) {
-	if (x < 0 || x >= width || y < 0 || y >= width) return outBounds;
-
-	return grid[y * width + x];
+int index3D(int* grid, Vec3 pos, Vec3 size) {
+	if (pos.z < 0) {
+		return 0;
+	}
+	if (pos.x < 0 || pos.x >= size.x || pos.y < 0 || pos.y >= size.y || pos.z >= size.z) {
+		return 1;
+	}
+	return grid[((int)pos.z * (int)size.y + (int)pos.y) * (int)size.x + (int)pos.x];
 }
 
 int vertexAO(int side0, int side1, int corner) {
@@ -39,66 +43,54 @@ int vertexAO(int side0, int side1, int corner) {
 	return side0 + side1 + corner;
 }
 
-VertexBuffer fromGrid(int* grid, size_t width, size_t height) {
+VertexBuffer fromGrid(int* grid, size_t width, size_t height, size_t depth) {
 	VertexBuffer vertices = newBuffer();
-	for (int j = 0; j <= height; j++) {
-		for (int i = 0; i <= width; i++) {
-			float x = i - width/2.0;
-			float y = j - height/2.0;
 
-			int middle = index2D(grid, i, j, width, height, 1);
+	Vec3 size = vec3(width, height, depth);
 
-			int top = index2D(grid, i, j - 1, width, height, 1);
-			int left = index2D(grid, i - 1, j, width, height, 1);
-			int bottom = index2D(grid, i, j + 1, width, height, 1);
-			int right = index2D(grid, i + 1, j, width, height, 1);
+	for (int k = 0; k <= depth; k++) {
+		for (int j = 0; j <= height; j++) {
+			for (int i = 0; i <= width; i++) {
+				float x = i - width/2.0;
+				float y = j - height/2.0;
 
-			int topleft = index2D(grid, i - 1, j - 1, width, height, 1);
-			int topright = index2D(grid, i + 1, j - 1, width, height, 1);
-			int bottomleft = index2D(grid, i -1, j + 1, width, height, 1);
-			int bottomright = index2D(grid, i + 1, j + 1, width, height, 1);
+				Vec3 pos = vec3(i, j, k);
+				Vec3 screenSpace = vec3(x, y, k);
 
-			if (middle != top) {
-				int cornerleft, cornerright, sideleft, sideright;
-				if (middle == 1) {
-					cornerleft = left;
-					cornerright = right;
-					sideleft = topleft;
-					sideright = topright;
-				} else {
-					cornerleft = topleft;
-					cornerright = topright;
-					sideleft = left;
-					sideright = right;
+				int middle = index3D(grid, vec3(i, j, k), size);
+
+				Vec3 axes[3][3] = {
+					{vec3(0, 1, 0), vec3(0, 0, 1), vec3(1, 0, 0)},
+					{vec3(0, 0, 1), vec3(1, 0, 0), vec3(0, 1, 0)},
+					{vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)}
+				};
+
+				for (int i = 0; i < 3; i++) {
+					Vec3 axisX = axes[i][0];
+					Vec3 axisY = axes[i][1];
+					Vec3 axisZ = axes[i][2];
+					if (index3D(grid, vec3Sub(pos, axisZ), size) != middle) {
+						Vec3 current = pos;
+						if (middle == 1) {
+							current = vec3Sub(current, axisZ);
+						}
+						int top = index3D(grid, vec3Sub(current, axisY), size);
+						int left = index3D(grid, vec3Sub(current, axisX), size);
+						int bottom = index3D(grid, vec3Add(current, axisY), size);
+						int right = index3D(grid, vec3Add(current, axisX), size);
+
+						int topleft = index3D(grid, vec3Sub(vec3Sub(current, axisX), axisY), size);
+						int topright = index3D(grid, vec3Sub(vec3Add(current, axisX), axisY), size);
+						int bottomleft = index3D(grid, vec3Add(vec3Sub(current, axisX), axisY), size);
+						int bottomright = index3D(grid, vec3Add(vec3Add(current, axisX), axisY), size);
+
+						bufferPush(&vertices, (Vertex) {.pos = screenSpace, .adjacent = vertexAO(top, left, topleft)});
+						bufferPush(&vertices, (Vertex) {.pos = vec3Add(screenSpace, axisX), .adjacent = vertexAO(top, right, topright)});
+						bufferPush(&vertices, (Vertex) {.pos = vec3Add(screenSpace, axisY), .adjacent = vertexAO(bottom, left, bottomleft)});
+						bufferPush(&vertices, (Vertex) {.pos = vec3Add(vec3Add(screenSpace, axisX), axisY), .adjacent = vertexAO(bottom, right, bottomright)});
+					}
 				}
-				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, 0), .adjacent = 0});
-				bufferPush(&vertices, (Vertex) {.pos = vec3(x + 1, y, 0), .adjacent = 0});
-				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, 1), .adjacent = vertexAO(1, sideleft, cornerleft)});
-				bufferPush(&vertices, (Vertex) {.pos = vec3(x + 1, y, 1), .adjacent = vertexAO(1, sideright, cornerright)});
 			}
-			if (middle != left) {
-				int cornertop, cornerbottom, sidetop, sidebottom;
-				if (middle == 1) {
-					cornertop = top;
-					cornerbottom = bottom;
-					sidetop = topleft;
-					sidebottom = bottomleft;
-				} else {
-					cornertop = topleft;
-					cornerbottom = bottomleft;
-					sidetop = top;
-					sidebottom = bottom;
-				}
-				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y + 1, 0), .adjacent = 0});
-				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, 0), .adjacent = 0});
-				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y + 1, 1), .adjacent = vertexAO(1, sidebottom, cornerbottom)});
-				bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, 1), .adjacent = vertexAO(1, sidetop, cornertop)});
-			}
-			int z = 1 - index2D(grid, i, j, width, height, 1);
-			bufferPush(&vertices, (Vertex) {.pos = vec3(x, y, z), .adjacent = z * vertexAO(top, left, topleft)});
-			bufferPush(&vertices, (Vertex) {.pos = vec3(x + 1, y, z), .adjacent = z * vertexAO(top, right, topright)});
-			bufferPush(&vertices, (Vertex) {.pos = vec3(x, y + 1, z), .adjacent = z * vertexAO(bottom, left, bottomleft)});
-			bufferPush(&vertices, (Vertex) {.pos = vec3(x + 1, y + 1, z), .adjacent = z * vertexAO(bottom, right, bottomright)});
 		}
 	}
 

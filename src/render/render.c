@@ -1,5 +1,8 @@
 #include "render.h"
 
+#include <stdio.h>
+#include <stdbool.h>
+
 Pixel pixel(float r, float g, float b, float a, float depth) {
 	Pixel pixel;
 	pixel.color.r = r;
@@ -26,53 +29,56 @@ Vec3 project(Vec3 p, Camera c) {
 }
 
 void render(unsigned char* image, size_t width, size_t height) {
-	int* grid = (int*)calloc(10 * 10, sizeof(int));
+	int* grid = (int*)calloc(10 * 10 * 10, sizeof(int));
 
-	for (int i = 0; i < 10; i++) {
+	for (int k = 0; k < 10; k++) {
 		for (int j = 0; j < 10; j++) {
-			// if (i == 0 || i == 9 || j == 0 || j == 9) {
-			// 	grid[i * 10 + j] = 0;
-			// } else {
-			// 	grid[i * 10 + j] = 1;
-			// }
-			if (i == j) {
-				grid[i * 10 + j] = 1;
-			} else {
-				grid[i * 10 + j] = 0;
+			for (int i = 0; i < 10; i++) {
+				// if (i == 0 || i == 9 || j == 0 || j == 9) {
+				// 	grid[i * 10 + j] = 0;
+				// } else {
+				// 	grid[i * 10 + j] = 1;
+				// }
+				if (i == j && j == k) {
+					grid[(k * 10 + j) * 10 + i] = 1;
+				} else {
+					grid[(k * 10 + j) * 10 + i] = 0;
+				}
 			}
 		}
 	}
-	grid[0] = 1;
 
 	Pixel* pixels = calloc(width * height, sizeof(Pixel));
 	for (int i = 0; i < width * height; i++) {
 		pixels[i] = pixel(0, 0, 0, 0, -INFINITY);
 	}
 
-	VertexBuffer vertices = fromGrid(grid, 10, 10);
+	VertexBuffer vertices = fromGrid(grid, 10, 10, 10);
 
 	Camera camera;
 	camera.pos = vec3(0, 0, -1);
 	camera.focalLength = 10;
 
 	float scaleFactor = 50.0;
-	float shadowRatio = 1/8.0;
+	float shadowRatio = 1/6.0;
 
-	outer: for (int i = 0; i < vertices.len; i+=4) {
+	for (int i = 0; i < vertices.len; i+=4) {
+		bool shouldContinue = false;
 		Vec3 face[4];
 		int adjacent[4];
 		for (int j = 0; j < 4; j++) {
 			Vertex* vertex = bufferGet(&vertices, i + j);
 			Vec3 projected = project(vertex->pos, camera);
 			if (projected.z == -1) {
-				goto outer; // this skips the face as one of its vertices are behind the camera
-				// please tell me a better solution than to use a goto (this feels extremely ugly)
+				shouldContinue = true;
+				break;
 			}
 			int x = (int)(scaleFactor * projected.x) + width/2;
 			int y = (int)(scaleFactor * projected.y) + height/2;
 			face[j] = vec3(x, y, projected.z);
 			adjacent[j] = vertex->adjacent;
 		}
+		if (shouldContinue) continue;
 		Vec3 v0 = bufferGet(&vertices, i + 0)->pos;
 		Vec3 v1 = bufferGet(&vertices, i + 1)->pos;
 		Vec3 v2 = bufferGet(&vertices, i + 2)->pos;

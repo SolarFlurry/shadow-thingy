@@ -9,6 +9,21 @@ Vec3 vec3(float x, float y, float z) {
 	return vec;
 }
 
+Vec3 vec3Add(Vec3 p0, Vec3 p1) {
+	return vec3(
+		p0.x + p1.x,
+		p0.y + p1.y,
+		p0.z + p1.z
+	);
+}
+Vec3 vec3Sub(Vec3 p0, Vec3 p1) {
+	return vec3(
+		p0.x - p1.x,
+		p0.y - p1.y,
+		p0.z - p1.z
+	);
+}
+
 Vec3 vec3Lerp(Vec3 p0, Vec3 p1, float t) {
 	return vec3(
 		p0.x + t*(p1.x - p0.x),
