@@ -53,21 +53,22 @@ void render(unsigned char* image, size_t width, size_t height) {
 		pixels[i] = pixel(0, 0, 0, 0, -INFINITY);
 	}
 
-	VertexBuffer vertices = fromGrid(grid, 10, 10, 10);
+	FaceBuffer faces = fromGrid(grid, 10, 10, 10);
 
 	Camera camera;
 	camera.pos = vec3(0, 0, -1);
 	camera.focalLength = 10;
 
 	float scaleFactor = 50.0;
-	float shadowRatio = 1/6.0;
+	float shadowRatio = 1/8.0;
 
-	for (int i = 0; i < vertices.len; i+=4) {
+	for (size_t i = 0; i < faces.len; i++) {
 		bool shouldContinue = false;
-		Vec3 face[4];
-		int adjacent[4];
+		Face* face = bufferGet(&faces, i);
+		Vec3 projectedFace[4];
+
 		for (int j = 0; j < 4; j++) {
-			Vertex* vertex = bufferGet(&vertices, i + j);
+			Vertex* vertex = &face->vertices[j];
 			Vec3 projected = project(vertex->pos, camera);
 			if (projected.z == -1) {
 				shouldContinue = true;
@@ -75,56 +76,38 @@ void render(unsigned char* image, size_t width, size_t height) {
 			}
 			int x = (int)(scaleFactor * projected.x) + width/2;
 			int y = (int)(scaleFactor * projected.y) + height/2;
-			face[j] = vec3(x, y, projected.z);
-			adjacent[j] = vertex->adjacent;
+			projectedFace[j] = vec3(x, y, projected.z);
 		}
+
 		if (shouldContinue) continue;
-		Vec3 v0 = bufferGet(&vertices, i + 0)->pos;
-		Vec3 v1 = bufferGet(&vertices, i + 1)->pos;
-		Vec3 v2 = bufferGet(&vertices, i + 2)->pos;
-		Vec3 a = vec3(
-			v1.x - v0.x,
-			v1.y - v0.y,
-			v1.z - v0.z
-		);
-		Vec3 b = vec3(
-			v2.x - v0.x,
-			v2.y - v0.y,
-			v2.z - v0.z
-		);
-		float shading = fabs(normalise(vec3(
-			a.y*b.z - a.z*b.y,
-			a.z*b.x - a.x*b.z,
-			a.x*b.y - a.y*b.x
-		)).z);
-		shading = (1 - shading) * 0.3;
+		float shading = (1 - fabs(face->normal.z)) * 0.3;
 		trifill(pixels,
 			(FillVertex) {
-				.pos = face[0],
-				.color = color(0, 0, 0, adjacent[0]*shadowRatio + shading)
+				.pos = projectedFace[0],
+				.color = color(0, 0, 0, face->vertices[0].adjacent*shadowRatio + shading)
 			},
 			(FillVertex) {
-				.pos = face[1],
-				.color = color(0, 0, 0, adjacent[1]*shadowRatio + shading)
+				.pos = projectedFace[1],
+				.color = color(0, 0, 0, face->vertices[1].adjacent*shadowRatio + shading)
 			},
 			(FillVertex) {
-				.pos = face[2],
-				.color = color(0, 0, 0, adjacent[2]*shadowRatio + shading)
+				.pos = projectedFace[2],
+				.color = color(0, 0, 0, face->vertices[2].adjacent*shadowRatio + shading)
 			},
 			width, height
 		);
 		trifill(pixels,
 			(FillVertex) {
-				.pos = face[1],
-				.color = color(0, 0, 0, adjacent[1]*shadowRatio + shading)
+				.pos = projectedFace[1],
+				.color = color(0, 0, 0, face->vertices[1].adjacent*shadowRatio + shading)
 			},
 			(FillVertex) {
-				.pos = face[2],
-				.color = color(0, 0, 0, adjacent[2]*shadowRatio + shading)
+				.pos = projectedFace[2],
+				.color = color(0, 0, 0, face->vertices[2].adjacent*shadowRatio + shading)
 			},
 			(FillVertex) {
-				.pos = face[3],
-				.color = color(0, 0, 0, adjacent[3]*shadowRatio + shading)
+				.pos = projectedFace[3],
+				.color = color(0, 0, 0, face->vertices[3].adjacent*shadowRatio + shading)
 			},
 			width, height
 		);
@@ -137,7 +120,7 @@ void render(unsigned char* image, size_t width, size_t height) {
 		image[i * 4 + 3] = pixels[i].color.a * 255;
 	}
 
-	freeBuffer(&vertices);
+	freeBuffer(&faces);
 	free(grid);
 	free(pixels);
 }

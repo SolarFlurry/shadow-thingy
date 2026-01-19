@@ -12,20 +12,21 @@ typedef struct {
 } Vertex;
 
 typedef struct {
-	Vertex* data;
-	size_t len;
-	size_t capacity;
-} VertexBuffer;
-
-VertexBuffer newBuffer();
-void freeBuffer(VertexBuffer* buffer);
-void bufferPush(VertexBuffer* buffer, Vertex item);
-Vertex* bufferGet(VertexBuffer* buffer, size_t index);
+	Vec3 normal;
+	Vertex vertices[4];
+} Face;
 
 typedef struct {
-	Vertex* vertices[4];
-} Face;
+	Face* data;
+	size_t len;
+	size_t capacity;
+} FaceBuffer;
+
+FaceBuffer newBuffer();
+void freeBuffer(FaceBuffer* buffer);
+void bufferPush(FaceBuffer* buffer, Face item);
+Face* bufferGet(FaceBuffer* buffer, size_t index);
 
 int index3D(int* grid, Vec3 pos, Vec3 size);
 
-VertexBuffer fromGrid(int* grid, size_t width, size_t height, size_t depth);
+FaceBuffer fromGrid(int* grid, size_t width, size_t height, size_t depth);

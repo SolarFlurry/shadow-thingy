@@ -1,27 +1,27 @@
 #include "block.h"
 
-VertexBuffer newBuffer() {
-	VertexBuffer buffer = {0};
+FaceBuffer newBuffer() {
+	FaceBuffer buffer = {0};
 	buffer.capacity = 1;
 	buffer.len = 0;
-	buffer.data = malloc(sizeof(Vertex));
+	buffer.data = malloc(sizeof(Face));
 	return buffer;
 }
 
-void freeBuffer(VertexBuffer* buffer) {
+void freeBuffer(FaceBuffer* buffer) {
 	free(buffer->data);
 }
 
-void bufferPush(VertexBuffer* buffer, Vertex item) {
+void bufferPush(FaceBuffer* buffer, Face item) {
 	if (buffer->len >= buffer->capacity) {
-		buffer->data = realloc(buffer->data, buffer->capacity * 2 * sizeof(Vertex));
 		buffer->capacity *= 2;
+		buffer->data = realloc(buffer->data, buffer->capacity * sizeof(Face));
 	}
 	buffer->data[buffer->len] = item;
 	buffer->len += 1;
 }
 
-Vertex* bufferGet(VertexBuffer* buffer, size_t index) {
+Face* bufferGet(FaceBuffer* buffer, size_t index) {
 	if (index >= buffer->len) return NULL; // the buffer code is really bad ok dont judge
 	return &buffer->data[index];
 }
@@ -43,8 +43,8 @@ int vertexAO(int side0, int side1, int corner) {
 	return side0 + side1 + corner;
 }
 
-VertexBuffer fromGrid(int* grid, size_t width, size_t height, size_t depth) {
-	VertexBuffer vertices = newBuffer();
+FaceBuffer fromGrid(int* grid, size_t width, size_t height, size_t depth) {
+	FaceBuffer faces = newBuffer();
 
 	Vec3 size = vec3(width, height, depth);
 
@@ -71,9 +71,14 @@ VertexBuffer fromGrid(int* grid, size_t width, size_t height, size_t depth) {
 					Vec3 axisZ = axes[i][2];
 					if (index3D(grid, vec3Sub(pos, axisZ), size) != middle) {
 						Vec3 current = pos;
+						Vec3 normal = axisZ;
 						if (middle == 1) {
 							current = vec3Sub(current, axisZ);
+							normal = vec3(-normal.x, -normal.y, -normal.z);
 						}
+
+						if (normal.z > 0) continue;
+
 						int top = index3D(grid, vec3Sub(current, axisY), size);
 						int left = index3D(grid, vec3Sub(current, axisX), size);
 						int bottom = index3D(grid, vec3Add(current, axisY), size);
@@ -83,16 +88,23 @@ VertexBuffer fromGrid(int* grid, size_t width, size_t height, size_t depth) {
 						int topright = index3D(grid, vec3Sub(vec3Add(current, axisX), axisY), size);
 						int bottomleft = index3D(grid, vec3Add(vec3Sub(current, axisX), axisY), size);
 						int bottomright = index3D(grid, vec3Add(vec3Add(current, axisX), axisY), size);
+						
+						Face face = (Face) {
+							.normal = normal,
+							.vertices = {
+								(Vertex) {.pos = screenSpace, .adjacent = vertexAO(top, left, topleft)},
+								(Vertex) {.pos = vec3Add(screenSpace, axisX), .adjacent = vertexAO(top, right, topright)},
+								(Vertex) {.pos = vec3Add(screenSpace, axisY), .adjacent = vertexAO(bottom, left, bottomleft)},
+								(Vertex) {.pos = vec3Add(vec3Add(screenSpace, axisX), axisY), .adjacent = vertexAO(bottom, right, bottomright)}
+							}
+						};
 
-						bufferPush(&vertices, (Vertex) {.pos = screenSpace, .adjacent = vertexAO(top, left, topleft)});
-						bufferPush(&vertices, (Vertex) {.pos = vec3Add(screenSpace, axisX), .adjacent = vertexAO(top, right, topright)});
-						bufferPush(&vertices, (Vertex) {.pos = vec3Add(screenSpace, axisY), .adjacent = vertexAO(bottom, left, bottomleft)});
-						bufferPush(&vertices, (Vertex) {.pos = vec3Add(vec3Add(screenSpace, axisX), axisY), .adjacent = vertexAO(bottom, right, bottomright)});
+						bufferPush(&faces, face);
 					}
 				}
 			}
 		}
 	}
 
-	return vertices;
+	return faces;
 }
