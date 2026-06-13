@@ -1,4 +1,5 @@
 #include "render.h"
+#include "block.h"
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -20,32 +21,35 @@ void write(Pixel* pixel, Pixel writee) {
 	}
 }
 
-Vec3 project(Vec3 p, Camera c) {
-	Vec3 relative = vec3(p.x - c.pos.x, p.y - c.pos.y, p.z - c.pos.z);
-	if (relative.z <= 0) return vec3(0, 0, -1);
+Vec3_float project(Vec3_float p, Camera c) {
+	Vec3_float relative = vec3_float(p.x - c.pos.x, p.y - c.pos.y, p.z - c.pos.z);
+	if (relative.z <= 0) return vec3_float(0, 0, -1);
 	float x = (c.focalLength * relative.x) / (c.focalLength + relative.z);
 	float y = (c.focalLength * relative.y) / (c.focalLength + relative.z);
-	return vec3(x, y, relative.z);
+	return vec3_float(x, y, relative.z);
 }
 
 void render(unsigned char* image, size_t width, size_t height) {
-	int* grid = (int*)calloc(10 * 10 * 10, sizeof(int));
+	Grid grid = (Grid){
+        .data = (int*)calloc(10 * 10 * 1, sizeof(int)),
+        .width = 10,
+        .height = 10,
+        .depth = 1,
+    };
 
-	for (int k = 0; k < 10; k++) {
-		for (int j = 0; j < 10; j++) {
-			for (int i = 0; i < 10; i++) {
-				// if (i == 0 || i == 9 || j == 0 || j == 9) {
-				// 	grid[i * 10 + j] = 0;
-				// } else {
-				// 	grid[i * 10 + j] = 1;
-				// }
-				if (i == j && j == k) {
-					grid[(k * 10 + j) * 10 + i] = 1;
-				} else {
-					grid[(k * 10 + j) * 10 + i] = 0;
-				}
-			}
-		}
+    for (int j = 0; j < 10; j++) {
+        for (int i = 0; i < 10; i++) {
+            // if (i == 0 || i == 9 || j == 0 || j == 9) {
+            // 	grid[i * 10 + j] = 0;
+            // } else {
+            // 	grid[i * 10 + j] = 1;
+            // }
+            if (i == j) {
+                grid.data[j * 10 + i] = 1;
+            } else {
+                grid.data[j * 10 + i] = 0;
+            }
+        }
 	}
 
 	Pixel* pixels = calloc(width * height, sizeof(Pixel));
@@ -53,10 +57,10 @@ void render(unsigned char* image, size_t width, size_t height) {
 		pixels[i] = pixel(0, 0, 0, 0, -INFINITY);
 	}
 
-	FaceBuffer faces = fromGrid(grid, 10, 10, 10);
+	FaceBuffer faces = fromGrid(grid);
 
 	Camera camera;
-	camera.pos = vec3(0, 0, -1);
+	camera.pos = vec3_float(0, 0, -1);
 	camera.focalLength = 10;
 
 	float scaleFactor = 50.0;
@@ -65,22 +69,22 @@ void render(unsigned char* image, size_t width, size_t height) {
 	for (size_t i = 0; i < faces.len; i++) {
 		bool shouldContinue = false;
 		Face* face = bufferGet(&faces, i);
-		Vec3 projectedFace[4];
+		Vec3_float projectedFace[4];
 
 		for (int j = 0; j < 4; j++) {
 			Vertex* vertex = &face->vertices[j];
-			Vec3 projected = project(vertex->pos, camera);
+			Vec3_float projected = project(vec3_float(vertex->pos.x, vertex->pos.y, vertex->pos.z), camera);
 			if (projected.z == -1) {
 				shouldContinue = true;
 				break;
 			}
 			int x = (int)(scaleFactor * projected.x) + width/2;
 			int y = (int)(scaleFactor * projected.y) + height/2;
-			projectedFace[j] = vec3(x, y, projected.z);
+			projectedFace[j] = vec3_float(x, y, projected.z);
 		}
 
 		if (shouldContinue) continue;
-		float shading = (1 - fabs(face->normal.z)) * 0.3;
+		float shading = (1 - abs(face->normal.z)) * 0.3;
 		trifill(pixels,
 			(FillVertex) {
 				.pos = projectedFace[0],
@@ -121,6 +125,6 @@ void render(unsigned char* image, size_t width, size_t height) {
 	}
 
 	freeBuffer(&faces);
-	free(grid);
+	free(grid.data);
 	free(pixels);
 }

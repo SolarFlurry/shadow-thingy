@@ -26,14 +26,14 @@ Face* bufferGet(FaceBuffer* buffer, size_t index) {
 	return &buffer->data[index];
 }
 
-int index3D(int* grid, Vec3 pos, Vec3 size) {
+int index3D(Grid grid, Vec3_int pos) {
 	if (pos.z < 0) {
 		return 0;
 	}
-	if (pos.x < 0 || pos.x >= size.x || pos.y < 0 || pos.y >= size.y || pos.z >= size.z) {
+	if (pos.x < 0 || pos.x >= grid.width || pos.y < 0 || pos.y >= grid.height || pos.z >= grid.depth) {
 		return 1;
 	}
-	return grid[((int)pos.z * (int)size.y + (int)pos.y) * (int)size.x + (int)pos.x];
+	return grid.data[(pos.z * grid.height + pos.y) * grid.width + pos.x];
 }
 
 int vertexAO(int side0, int side1, int corner) {
@@ -43,59 +43,59 @@ int vertexAO(int side0, int side1, int corner) {
 	return side0 + side1 + corner;
 }
 
-FaceBuffer fromGrid(int* grid, size_t width, size_t height, size_t depth) {
+FaceBuffer fromGrid(Grid grid) {
 	FaceBuffer faces = newBuffer();
 
-	Vec3 size = vec3(width, height, depth);
+	Vec3_int size = vec3_int(grid.width, grid.height, grid.depth);
 
-	for (int k = 0; k <= depth; k++) {
-		for (int j = 0; j <= height; j++) {
-			for (int i = 0; i <= width; i++) {
-				float x = i - width/2.0;
-				float y = j - height/2.0;
+	for (int k = 0; k <= grid.depth; k++) {
+		for (int j = 0; j <= grid.height; j++) {
+			for (int i = 0; i <= grid.width; i++) {
+				float x = i - grid.width/2.0;
+				float y = j - grid.height/2.0;
 
-				Vec3 pos = vec3(i, j, k);
-				Vec3 screenSpace = vec3(x, y, k);
+				Vec3_int pos = vec3_int(i, j, k);
+				Vec3_int screenSpace = vec3_int(x, y, k);
 
-				int middle = index3D(grid, vec3(i, j, k), size);
+				int middle = index3D(grid, pos);
 
-				Vec3 axes[3][3] = {
-					{vec3(0, 1, 0), vec3(0, 0, 1), vec3(1, 0, 0)},
-					{vec3(0, 0, 1), vec3(1, 0, 0), vec3(0, 1, 0)},
-					{vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)}
+				int axes[27] = {
+                    0, 1, 0, /**/ 0, 0, 1, /**/ 1, 0, 0,
+                    0, 0, 1, /**/ 1, 0, 0, /**/ 0, 1, 0,
+                    1, 0, 0, /**/ 0, 1, 0, /**/ 0, 0, 1,
 				};
 
 				for (int i = 0; i < 3; i++) {
-					Vec3 axisX = axes[i][0];
-					Vec3 axisY = axes[i][1];
-					Vec3 axisZ = axes[i][2];
-					if (index3D(grid, vec3Sub(pos, axisZ), size) != middle) {
-						Vec3 current = pos;
-						Vec3 normal = axisZ;
+					Vec3_int axisX = vec3_int(axes[i * 9 + 0], axes[i * 9 + 1], axes[i * 9 + 2]);
+					Vec3_int axisY = vec3_int(axes[i * 9 + 3], axes[i * 9 + 4], axes[i * 9 + 5]);
+					Vec3_int axisZ = vec3_int(axes[i * 9 + 6], axes[i * 9 + 7], axes[i * 9 + 8]);
+					if (index3D(grid, vec3Sub_int(pos, axisZ)) != middle) {
+						Vec3_int current = pos;
+						Vec3_int normal = axisZ;
 						if (middle == 1) {
-							current = vec3Sub(current, axisZ);
-							normal = vec3(-normal.x, -normal.y, -normal.z);
+							current = vec3Sub_int(current, normal);
+							normal = vec3_int(-normal.x, -normal.y, -normal.z);
 						}
 
 						if (normal.z > 0) continue;
 
-						int top = index3D(grid, vec3Sub(current, axisY), size);
-						int left = index3D(grid, vec3Sub(current, axisX), size);
-						int bottom = index3D(grid, vec3Add(current, axisY), size);
-						int right = index3D(grid, vec3Add(current, axisX), size);
+						int top = index3D(grid, vec3Sub_int(current, axisY));
+						int left = index3D(grid, vec3Sub_int(current, axisX));
+						int bottom = index3D(grid, vec3Add_int(current, axisY));
+						int right = index3D(grid, vec3Add_int(current, axisX));
 
-						int topleft = index3D(grid, vec3Sub(vec3Sub(current, axisX), axisY), size);
-						int topright = index3D(grid, vec3Sub(vec3Add(current, axisX), axisY), size);
-						int bottomleft = index3D(grid, vec3Add(vec3Sub(current, axisX), axisY), size);
-						int bottomright = index3D(grid, vec3Add(vec3Add(current, axisX), axisY), size);
+						int topleft = index3D(grid, vec3Sub_int(vec3Sub_int(current, axisX), axisY));
+						int topright = index3D(grid, vec3Sub_int(vec3Add_int(current, axisX), axisY));
+						int bottomleft = index3D(grid, vec3Add_int(vec3Sub_int(current, axisX), axisY));
+						int bottomright = index3D(grid, vec3Add_int(vec3Add_int(current, axisX), axisY));
 						
 						Face face = (Face) {
 							.normal = normal,
 							.vertices = {
 								(Vertex) {.pos = screenSpace, .adjacent = vertexAO(top, left, topleft)},
-								(Vertex) {.pos = vec3Add(screenSpace, axisX), .adjacent = vertexAO(top, right, topright)},
-								(Vertex) {.pos = vec3Add(screenSpace, axisY), .adjacent = vertexAO(bottom, left, bottomleft)},
-								(Vertex) {.pos = vec3Add(vec3Add(screenSpace, axisX), axisY), .adjacent = vertexAO(bottom, right, bottomright)}
+								(Vertex) {.pos = vec3Add_int(screenSpace, axisX), .adjacent = vertexAO(top, right, topright)},
+								(Vertex) {.pos = vec3Add_int(screenSpace, axisY), .adjacent = vertexAO(bottom, left, bottomleft)},
+								(Vertex) {.pos = vec3Add_int(vec3Add_int(screenSpace, axisX), axisY), .adjacent = vertexAO(bottom, right, bottomright)}
 							}
 						};
 

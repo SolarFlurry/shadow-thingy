@@ -13,7 +13,7 @@ void scanline(Pixel* buffer, FillVertex* p0, FillVertex* p1, int width, int heig
 	int length = (int)(p1->pos.x - p0->pos.x + 0.5);
 	if (p1->pos.x - p0->pos.x == 0) return;
 	for (int i = 0; i <= length; i++) {
-		Vec3 pos = vec3Lerp(p0->pos, p1->pos, i / (float)length);
+		Vec3_float pos = vec3Lerp_float(p0->pos, p1->pos, i / (float)length);
 		Color color = colorLerp(p0->color, p1->color, i / (float)length);
 
 		int x = i + (int)(p0->pos.x + 0.5);
@@ -44,13 +44,13 @@ void trifill(Pixel* buffer, FillVertex p0, FillVertex p1, FillVertex p2, int wid
 		float t = i / (tp1->pos.y - tp0->pos.y);
 		float t2 = i / (tp2->pos.y - tp0->pos.y);
 		FillVertex v = (FillVertex) {
-			.pos = vec3Lerp(tp0->pos, tp1->pos, t),
+			.pos = vec3Lerp_float(tp0->pos, tp1->pos, t),
 			.color = colorLerp(colorDiv(tp0->color, tp0->pos.z), colorDiv(tp1->color, tp1->pos.z), t)
 		};
 		v.pos.z = tp01z + t * (tp11z - tp01z);
 		v.pos.y = i + tp0->pos.y;
 		FillVertex v2 = (FillVertex) {
-			.pos = vec3Lerp(tp0->pos, tp2->pos, t2),
+			.pos = vec3Lerp_float(tp0->pos, tp2->pos, t2),
 			.color = colorLerp(colorDiv(tp0->color, tp0->pos.z), colorDiv(tp2->color, tp2->pos.z), t2)
 		};
 		v2.pos.z = tp01z + t2 * (tp21z - tp01z);
@@ -61,13 +61,13 @@ void trifill(Pixel* buffer, FillVertex p0, FillVertex p1, FillVertex p2, int wid
 		float t = i / (tp2->pos.y - tp1->pos.y);
 		float t2 = (i + tp1->pos.y - tp0->pos.y) / (tp2->pos.y - tp0->pos.y);
 		FillVertex v = (FillVertex) {
-			.pos = vec3Lerp(tp1->pos, tp2->pos, t),
+			.pos = vec3Lerp_float(tp1->pos, tp2->pos, t),
 			.color = colorLerp(colorDiv(tp1->color, tp1->pos.z), colorDiv(tp2->color, tp2->pos.z), t)
 		};
 		v.pos.z = tp11z + t * (tp21z - tp11z);
 		v.pos.y = i + tp1->pos.y;
 		FillVertex v2 = (FillVertex) {
-			.pos = vec3Lerp(tp0->pos, tp2->pos, t2),
+			.pos = vec3Lerp_float(tp0->pos, tp2->pos, t2),
 			.color = colorLerp(colorDiv(tp0->color, tp0->pos.z), colorDiv(tp2->color, tp2->pos.z), t2)
 		};
 		v2.pos.z = tp01z + t2 * (tp21z - tp01z);

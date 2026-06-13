@@ -9,7 +9,7 @@
 typedef struct Pixel Pixel;
 
 typedef struct {
-	Vec3 pos;
+	Vec3_float pos;
 	Color color;
 } FillVertex;
 
