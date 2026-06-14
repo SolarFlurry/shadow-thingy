@@ -1,2 +1,5 @@
 bin
 build
+zig-out
+.zig-cache
+.cache
