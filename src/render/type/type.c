@@ -1,6 +1,6 @@
 #include "type.h"
 
-VEC3_FLOAT_IMPL(float)
+VEC3_FLOAT_IMPL(float, sqrtf)
 VEC3_IMPL(int)
 
 Color color (float r, float g, float b, float a) {

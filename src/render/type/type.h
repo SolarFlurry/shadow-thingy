@@ -11,12 +11,7 @@ Vec3_ ## T vec3Add_ ## T(Vec3_ ## T p0, Vec3_ ## T p1);\
 Vec3_ ## T vec3Sub_ ## T(Vec3_ ## T p0, Vec3_ ## T p1);\
 
 #define VEC3_FLOAT(T) \
-typedef struct Vec3_ ## T {\
-	T x, y, z;\
-} Vec3_ ## T;\
-Vec3_ ## T vec3_ ## T(T x, T y, T z);\
-Vec3_ ## T vec3Add_ ## T(Vec3_ ## T p0, Vec3_ ## T p1);\
-Vec3_ ## T vec3Sub_ ## T(Vec3_ ## T p0, Vec3_ ## T p1);\
+VEC3(T)\
 Vec3_ ## T vec3Lerp_ ## T(Vec3_ ## T p0, Vec3_ ## T p1, T t);\
 Vec3_ ## T vec3Normalise_ ## T(Vec3_ ## T p);\
 
@@ -39,24 +34,8 @@ Vec3_ ## T vec3Sub_ ## T(Vec3_ ## T p0, Vec3_ ## T p1) {\
 	);\
 }\
 
-#define VEC3_FLOAT_IMPL(T) \
-Vec3_ ## T vec3_ ## T(T x, T y, T z) {\
-	return (Vec3_ ## T){x,y,z};\
-}\
-Vec3_ ## T vec3Add_ ## T(Vec3_ ## T p0, Vec3_ ## T p1) {\
-	return vec3_ ## T(\
-		p0.x + p1.x,\
-		p0.y + p1.y,\
-		p0.z + p1.z\
-	);\
-}\
-Vec3_ ## T vec3Sub_ ## T(Vec3_ ## T p0, Vec3_ ## T p1) {\
-	return vec3_ ## T(\
-		p0.x - p1.x,\
-		p0.y - p1.y,\
-		p0.z - p1.z\
-	);\
-}\
+#define VEC3_FLOAT_IMPL(T, sqrtFunc) \
+VEC3_IMPL(T)\
 Vec3_ ## T vec3Lerp_ ## T(Vec3_ ## T p0, Vec3_ ## T p1, T t) {\
 	return vec3_ ## T(\
 		p0.x + t*(p1.x - p0.x),\
@@ -72,7 +51,7 @@ Vec3_ ## T vec3Div_ ## T(Vec3_ ## T p0, T p1) {\
 	);\
 }\
 Vec3_ ## T vec3Normalise_ ## T(Vec3_ ## T p) {\
-	T length = sqrtf(p.x*p.x + p.y*p.y + p.z*p.z);\
+	T length = sqrtFunc(p.x*p.x + p.y*p.y + p.z*p.z);\
 	return vec3Div_ ## T(p, length);\
 }\
 
